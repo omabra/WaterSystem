@@ -77,8 +77,6 @@ void printWEB() {
 
     String header = "";
     String body = "";
-
-    int responseSize = 0;
                   
     while (client.connected()) {            
       if (client.available()) {         
@@ -87,13 +85,11 @@ void printWEB() {
         response += c;
         
         if (c == '\r'){
-          if (response.charAt(response.length()-2) == '\n'){
+          if (response.charAt(response.length() - 2) == '\n'){
             //If there response contains an empty line, the header is finished.
           
             header = response;
             response = "";
-
-            Serial.println (header);            
             
             String httpMethod = header.substring(0, header.indexOf(" /"));
             String uri = header.substring(header.indexOf(" /") +1, header.indexOf(" HTTP"));
@@ -105,23 +101,25 @@ void printWEB() {
             // Client and authorization should kill the request if not authorized
             // Content-lenght should be used to retrive the rest body
             
-            
-            break;
-            if (httpMethod == "GET") {
-              httpResponseString = "HTTP/1.1 200 OK";
-              payload = "{\"test\":\"Test\"}";
-              break;
-            } else if (httpMethod == "POST"){
-              if(header.indexOf("Content-Length: ") >= 0){
-
-                String s = header.substring(header.indexOf("Content-Length: "));
-                Serial.println (s);
-              
-              }
-            } else {
-              //other HTTP methods are not supported at the moment
+            if (httpMethod != "GET" && httpMethod != "POST") {
               httpResponseString = "HTTP/1.1 405 Method Not Allowed";
-              break;
+              payload = "{\"error\": \"The method " + httpMethod + " is not supported\"}";
+            }
+
+            //If the request has a body, it is extracted
+            if(header.indexOf("Content-Length: ") >= 0){
+
+              String s = header.substring(header.indexOf("Content-Length: "));
+              int bodySize = s.substring(s.indexOf(": ") + 1).toInt();
+              
+              int i = 0;
+              while (i <= bodySize){
+                char c = client.read();             
+                response += c;
+                i++;
+              }
+
+              body = response;
             }
               
 
@@ -134,57 +132,13 @@ void printWEB() {
             }
             // The HTTP response ends with another blank line:
             client.println();
-            
+            break;
           }
 
             
         }
       }
 
-        
-        
-        //Serial.write(c);                    
-                          
-
-        
-            
-            /*
-            // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
-            // and a content-type so the client knows what's coming, then a blank line:
-            client.println("HTTP/1.1 200 OK");
-            client.println("Content-type:application/json");
-            client.println("Access-Control-Allow-Origin: *");
-            client.println();
-            client.println(payload);
-            // The HTTP response ends with another blank line:
-            client.println();
-            /*
-
-          
-
-        /*
-        
-        
-        if (currentLine.endsWith("POST /setOutput")) {
-          digitalWrite(ledPin, HIGH);
-          internalLed (0, 127, 0);
-
-          payload = "{\"status\": {\"led1\": \"On\"}}";
-        }
-
-        if (currentLine.endsWith("POST /resetOutput")) {
-          digitalWrite(ledPin, LOW);
-          internalLed (0, 0, 0);
-
-          payload = "{\"status\": {\"led1\": \"Off\"}}";
-        }
-
-        if (currentLine.endsWith("GET /sensor")) {
-          sensorValue = analogRead(sensorPin);
-
-          payload = "{\"status\": {\"sensor1\": \"" + String(sensorValue) + "\"}}";
-        }
-        */
       }
       
     }
