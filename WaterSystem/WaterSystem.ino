@@ -32,8 +32,8 @@ void setup() {
 
   connect_WiFi();
 
-  rtc.begin();
-  setRTC();
+  //rtc.begin();
+  //setRTC();
 
   server.begin();
 
@@ -41,7 +41,7 @@ void setup() {
 
 void loop() {
   client = server.available();
-  secs = rtc.getSeconds();
+  //secs = rtc.getSeconds();
 
   if (client) {
     unsigned long timeout = millis();
@@ -60,72 +60,116 @@ void connect_WiFi() {
     Serial.println(ssid);
     // Connect to WPA/WPA2 network. Change this line if using open or WEP network:
     status = WiFi.begin(ssid, pass);
-
-    // wait 10 seconds for connection:
-    delay(10000);
-    // print your board's IP address:
     IPAddress ip = WiFi.localIP();
     Serial.print("IP Address: ");
     Serial.println(ip);
+    Serial.println();
+
   }
 }
 
 void printWEB() {
-  String payload = "";
+  String payload = "{\"test\":\"Test\"}";
   int contentLenght = 0;
   int payloadSize = 0;
   int payloadByte = 0;
 
-  if (client) {                             // if you get a client,
+  if (client) {                             
 
-    String currentLine = "";                // make a String to hold incoming data from the client
-    while (client.connected()) {            // loop while the client's connected
-      if (client.available()) {             // if there's bytes to read from the client,
-        char c = client.read();             // read a byte, then
-        
-        
-        Serial.write(c);                    // print it out the serial monitor
-        if (c == '\n') {                    // if the byte is a newline character
+    
+    String response = "";
 
-          // if the current line is blank, you got two newline characters in a row.
-          // that's the end of the client HTTP request, so send a response:
-          if (currentLine.length() == 0) {
+    String header = "";
+    String body = "";
+
+    int responseSize = 0;
+                  
+    while (client.connected()) {            
+      if (client.available()) {         
+        
+
+        char c = client.read();             
+        response += c;
+        
+        if (c == '\r'){
+          if (response.charAt(response.length()-2) == '\n'){
+            //If there response contains an empty line, the header is finished.
+          
+            header = response;
+            response = "";
+
+            Serial.println (header);            
             
+            String httpMethod = header.substring(0, header.indexOf(" /"));
+            //String uri = header.substring(header.indexOf(" /") -1, header.substring(0,header.indexOf(" HTTP/1.1")));
+            Serial.println (httpMethod);
+            
+            if (httpMethod == "GET") {
+              client.println("HTTP/1.1 200 OK");
+              client.println("Content-type:application/json");
+              client.println("Access-Control-Allow-Origin: *");
+              client.println();
+              client.println(payload);
+              // The HTTP response ends with another blank line:
+              client.println();
+              break;
+            } else if (httpMethod == "POST"){
+              if(header.indexOf("Content-Length: ") >= 0){
 
+                String s = header.substring(header.indexOf("Content-Length: "));
+                Serial.println (s);
+              
+              }
+            } else {
+              client.println("HTTP/1.1 405 Method Not Allowed");
+              client.println("Content-type:application/json");
+              client.println("Access-Control-Allow-Origin: *");
+              client.println();
+              // The HTTP response ends with another blank line:
+              client.println();
+              break;
+            }
+              
+              
+                
+
+
+
+
+
+            
+            
+            
+          }
+
+            
+        }
+      }
+
+        
+        
+        //Serial.write(c);                    
+                          
+
+        
+            
+            /*
             // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
             // and a content-type so the client knows what's coming, then a blank line:
             client.println("HTTP/1.1 200 OK");
             client.println("Content-type:application/json");
             client.println("Access-Control-Allow-Origin: *");
             client.println();
-
             client.println(payload);
             // The HTTP response ends with another blank line:
             client.println();
-            // break out of the while loop:
-            //break;
-          }
-          else {      // if you got a newline, then clear currentLine:
-            currentLine = "";
-          }
-        }
-        else if (c != '\r') {    // if you got anything else but a carriage return character,
-          currentLine += c;      // add it to the end of the currentLine
-        }
+            /*
 
-
-        if(currentLine.indexOf("Content-Length: ") >= 0){
-          if (currentLine.length() == contentLenght){
-           
-            String s = currentLine.substring(currentLine.indexOf(": ")+2);
-            payloadSize = int (s);
-          }
           
-          contentLenght = currentLine.length();
-        }
 
+        /*
         
-
+        
         if (currentLine.endsWith("POST /setOutput")) {
           digitalWrite(ledPin, HIGH);
           internalLed (0, 127, 0);
@@ -145,7 +189,7 @@ void printWEB() {
 
           payload = "{\"status\": {\"sensor1\": \"" + String(sensorValue) + "\"}}";
         }
-
+        */
       }
       
     }
@@ -153,7 +197,7 @@ void printWEB() {
     client.stop();
 
   }
-}
+
 
 void internalLed(int Red, int Green, int Blue) {
   WiFiDrv::digitalWrite(25, Green); //GREEN
@@ -171,7 +215,7 @@ void setRTC() { // get the time from Internet Time Service
   while ((epoch == 0) && (numberOfTries < maxTries));
 
   if (numberOfTries == maxTries) {
-    Serial.print("NTP unreachable!!");
-    while (1);  // hang
+    Serial.println("NTP unreachable!!");
+    //while (1);  // hang
   }
 }
