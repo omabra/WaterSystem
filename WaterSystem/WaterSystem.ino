@@ -28,6 +28,8 @@ void setup() {
   WiFiDrv::pinMode(26, OUTPUT); //Internal led define red pin
   WiFiDrv::pinMode(27, OUTPUT); //Internal led define blue pin
 
+  internalLed (0, 255, 0);
+
   while (!Serial);
 
   connect_WiFi();
@@ -36,7 +38,7 @@ void setup() {
   //setRTC();
 
   server.begin();
-
+  
 }
 
 void loop() {
@@ -46,10 +48,7 @@ void loop() {
   if (client) {
     unsigned long timeout = millis();
     printWEB();
-    Serial.print("Time to responde: ");
-    Serial.print(millis() - timeout);
-    Serial.println(" ms");
-
+    
   }
 }
 
@@ -64,19 +63,16 @@ void connect_WiFi() {
     Serial.print("IP Address: ");
     Serial.println(ip);
     Serial.println();
+    internalLed (255, 0, 0);
 
   }
 }
 
 void printWEB() {
-  String payload = "{\"test\":\"Test\"}";
-  int contentLenght = 0;
-  int payloadSize = 0;
-  int payloadByte = 0;
-
+  String payload = "";
+  String httpResponseString = "HTTP/1.1 200 OK";
+  
   if (client) {                             
-
-    
     String response = "";
 
     String header = "";
@@ -86,7 +82,6 @@ void printWEB() {
                   
     while (client.connected()) {            
       if (client.available()) {         
-        
 
         char c = client.read();             
         response += c;
@@ -101,17 +96,20 @@ void printWEB() {
             Serial.println (header);            
             
             String httpMethod = header.substring(0, header.indexOf(" /"));
-            //String uri = header.substring(header.indexOf(" /") -1, header.substring(0,header.indexOf(" HTTP/1.1")));
-            Serial.println (httpMethod);
+            String uri = header.substring(header.indexOf(" /") +1, header.indexOf(" HTTP"));
             
+            //String client = header.substring(header.indexOf("Client: ") +1, header.indexOf(" HTTP"));
+
+            //TODO:
+            // Extract for header: Client, Authorization and Content-lenght.
+            // Client and authorization should kill the request if not authorized
+            // Content-lenght should be used to retrive the rest body
+            
+            
+            break;
             if (httpMethod == "GET") {
-              client.println("HTTP/1.1 200 OK");
-              client.println("Content-type:application/json");
-              client.println("Access-Control-Allow-Origin: *");
-              client.println();
-              client.println(payload);
-              // The HTTP response ends with another blank line:
-              client.println();
+              httpResponseString = "HTTP/1.1 200 OK";
+              payload = "{\"test\":\"Test\"}";
               break;
             } else if (httpMethod == "POST"){
               if(header.indexOf("Content-Length: ") >= 0){
@@ -121,24 +119,21 @@ void printWEB() {
               
               }
             } else {
-              client.println("HTTP/1.1 405 Method Not Allowed");
-              client.println("Content-type:application/json");
-              client.println("Access-Control-Allow-Origin: *");
-              client.println();
-              // The HTTP response ends with another blank line:
-              client.println();
+              //other HTTP methods are not supported at the moment
+              httpResponseString = "HTTP/1.1 405 Method Not Allowed";
               break;
             }
               
-              
-                
 
-
-
-
-
-            
-            
+            client.println(httpResponseString);
+            client.println("Content-type:application/json");
+            client.println("Access-Control-Allow-Origin: *");
+            client.println();
+            if (payload.length() > 0){
+              client.println(payload);
+            }
+            // The HTTP response ends with another blank line:
+            client.println();
             
           }
 
