@@ -89,8 +89,21 @@ void printWEB() {
             //If there response contains an empty line, the header is finished.
           
             header = response;
+            Serial.println(header);
             response = "";
             
+            for (i==0; i < payload.length();i++){
+
+            }
+
+
+
+
+
+
+
+
+
             String httpMethod = header.substring(0, header.indexOf(" /"));
             String uri = header.substring(header.indexOf(" /") +1, header.indexOf(" HTTP"));
             
@@ -119,7 +132,7 @@ void printWEB() {
                 i++;
               }
 
-              body = response;
+              payload = response;
             }
               
 
